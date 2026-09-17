@@ -1,0 +1,568 @@
+/*
+ * Mobile-first: everything below is written for a phone-width
+ * viewport first. Media queries only ADD/override styles as the
+ * viewport grows (tablet at 700px, desktop at 960px) - never the
+ * other way around.
+ */
+
+:root {
+  --color-bg: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-border: #e1e4e9;
+  --color-text: #1f2430;
+  --color-text-muted: #6b7280;
+  --color-primary: #2563eb;
+  --color-approved: #22a06b;
+  --color-pending: #d29922;
+  --color-rejected: #d9463c;
+  --radius: 10px;
+  --tap-min: 44px; /* minimum comfortable touch target */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.hidden { display: none !important; }
+
+/* ===================== HEADER ===================== */
+
+.topbar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.topbar h1 {
+  font-size: 17px;
+  margin: 0;
+}
+
+#authArea { width: 100%; }
+
+#signedInView {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.linkBtn {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 0;
+  min-height: var(--tap-min);
+}
+
+/* ===================== LAYOUT ===================== */
+
+main {
+  margin: 0 auto;
+  padding: 12px 12px 48px;
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  width: 100%;
+}
+
+.filterField label {
+  color: var(--color-text-muted);
+}
+
+.filterField input,
+.filterField select {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 15px;
+  width: 100%;
+  min-height: var(--tap-min);
+  background: var(--color-surface);
+}
+
+#applyFiltersBtn {
+  width: 100%;
+  padding: 12px 18px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: var(--tap-min);
+}
+
+#applyFiltersBtn:hover { opacity: 0.9; }
+
+.statusArea {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.statusArea.info { background: #eaf2ff; color: #1d4ed8; }
+.statusArea.error { background: #fdecea; color: #b3261e; }
+
+/* ===================== SUMMARY CARDS ===================== */
+
+.summaryCards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.card .cardLabel {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.card .cardValue {
+  font-size: 21px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* ===================== CHART ===================== */
+
+.chartSection {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.chartWrap {
+  position: relative;
+  height: 220px;
+}
+
+/* ===================== TABLE (card layout on mobile) ===================== */
+
+.tableSection {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+/* Mobile: hide the header row, render each <tr> as its own card and
+   each <td> as a label/value line using the data-label attribute. */
+thead { display: none; }
+
+tbody tr {
+  display: block;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  padding: 4px 14px;
+}
+
+tbody tr.detailRow {
+  background: #fafbfc;
+  padding: 12px 14px;
+  margin-top: -10px;
+}
+
+tbody td {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--color-border);
+  text-align: right;
+}
+
+tbody tr.detailRow td {
+  display: block;
+  padding: 0;
+  border-bottom: none;
+  text-align: left;
+}
+
+tbody td:last-child { border-bottom: none; }
+
+tbody td[data-label]::before {
+  content: attr(data-label);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+td.detailsCell {
+  justify-content: center;
+}
+
+.numCell { font-variant-numeric: tabular-nums; }
+
+.rejectedPct.high { color: var(--color-rejected); font-weight: 600; }
+
+.expandBtn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  min-height: var(--tap-min);
+  width: 100%;
+}
+
+/* ===================== REJECTION BREAKDOWN (period-wide + per-row) ===================== */
+
+.rejectionSection {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  font-size: 15px;
+  margin: 0 0 2px;
+}
+
+.sectionSubtitle {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 0 0 12px;
+}
+
+.categoryBlock {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.categoryBlock:last-child { margin-bottom: 0; }
+
+.categoryToggle,
+.reasonToggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  min-height: var(--tap-min);
+}
+
+.categoryToggle {
+  padding: 10px 12px;
+  font-weight: 600;
+  background: #fafbfc;
+}
+
+.reasonToggle {
+  padding: 9px 12px 9px 28px;
+  color: var(--color-text);
+  border-top: 1px dashed var(--color-border);
+}
+
+.chevron {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  color: var(--color-text-muted);
+}
+
+.categoryToggle.open .chevron,
+.reasonToggle.open .chevron {
+  transform: rotate(90deg);
+}
+
+.reasonPanel {
+  border-top: 1px solid var(--color-border);
+}
+
+.reasonBlock:last-child .sampleBox {
+  border-bottom: none;
+}
+
+.sampleBox {
+  padding: 8px 14px 12px 28px;
+  border-top: 1px dashed var(--color-border);
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  background: #fafbfc;
+}
+
+.sampleLabel {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.sampleList {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.copyBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+  min-height: 36px;
+}
+
+.copyBtn:active { background: #f0f2f5; }
+
+.sampleTextWrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sampleText {
+  word-break: break-word;
+  color: var(--color-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+/* The task name travels with each sample as one unbroken unit (per-word
+   wrapping here would separate it from its parenthesis mid-phrase); the
+   row as a whole still wraps onto a new line via .sampleTextWrap above. */
+.sampleTaskTag {
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.copyLabel {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.copyBtn.copied { border-color: var(--color-approved); }
+.copyBtn.copied .copyLabel { color: var(--color-approved); }
+
+/* ===================== ADMIN TASK / CULPRIT DRILL-DOWN ===================== */
+
+.subsectionLabel {
+  padding: 10px 12px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  background: #fafbfc;
+  border-top: 1px solid var(--color-border);
+}
+
+.subsectionLabel:first-child { border-top: none; }
+
+.emptyInline {
+  padding: 8px 12px 12px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  background: #fafbfc;
+}
+
+.taskIdTag {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  margin-left: 2px;
+}
+
+.culpritToggle {
+  padding-left: 44px;
+}
+
+.culpritBlock .sampleBox {
+  padding-left: 44px;
+}
+
+.emptyState {
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.dot.approved { background: var(--color-approved); }
+.dot.pending { background: var(--color-pending); }
+.dot.rejected { background: var(--color-rejected); }
+
+/* ===================== TABLET (>=700px) ===================== */
+
+@media (min-width: 700px) {
+  main {
+    max-width: 900px;
+    padding: 20px 20px 48px;
+  }
+
+  .topbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+  }
+
+  #authArea { width: auto; }
+
+  .filters {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: end;
+  }
+
+  .filterField { width: auto; min-width: 150px; flex: 1 1 150px; }
+
+  .filterField.filterActions { flex: 0 0 auto; }
+
+  #applyFiltersBtn { width: auto; }
+
+  .summaryCards {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+  }
+
+  .chartWrap { height: 280px; }
+}
+
+/* ===================== DESKTOP (>=960px): real table ===================== */
+
+@media (min-width: 960px) {
+  main { max-width: 1100px; }
+
+  .tableSection {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  thead { display: table-header-group; }
+
+  thead th {
+    text-align: left;
+    padding: 10px 14px;
+    background: #fafbfc;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+
+  tbody tr {
+    display: table-row;
+    background: none;
+    border: none;
+    border-radius: 0;
+    margin-bottom: 0;
+    padding: 0;
+  }
+
+  tbody tr:not(.detailRow) {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  tbody td {
+    display: table-cell;
+    padding: 10px 14px;
+    border-bottom: none;
+    text-align: left;
+  }
+
+  tbody td[data-label]::before { content: none; }
+
+  .numCell { text-align: right; }
+
+  td.detailsCell { text-align: center; }
+
+  .expandBtn { width: auto; }
+
+  tr.detailRow td {
+    background: #fafbfc;
+    padding: 14px;
+  }
+}
