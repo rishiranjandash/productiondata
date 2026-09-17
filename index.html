@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Producer Production Dashboard</title>
+<link rel="stylesheet" href="style.css" />
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Producer Production Dashboard</h1>
+  <div id="authArea">
+    <div id="signedOutView">
+      <div id="googleSignInButton"></div>
+    </div>
+    <div id="signedInView" class="hidden">
+      <span id="userLabel"></span>
+      <button id="signOutBtn" class="linkBtn">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<main id="app" class="hidden">
+
+  <section class="filters">
+    <div class="filterField">
+      <label for="fromDate">From</label>
+      <input type="date" id="fromDate" />
+    </div>
+    <div class="filterField">
+      <label for="toDate">To</label>
+      <input type="date" id="toDate" />
+    </div>
+    <div class="filterField" id="producerFilterField">
+      <label for="producerSelect">Producer</label>
+      <select id="producerSelect"></select>
+    </div>
+    <div class="filterField" id="projectFilterField">
+      <label for="projectSelect">Project</label>
+      <select id="projectSelect"></select>
+    </div>
+    <div class="filterField">
+      <label for="taskSelect">Task</label>
+      <select id="taskSelect"></select>
+    </div>
+    <div class="filterField filterActions">
+      <button id="applyFiltersBtn">Apply</button>
+    </div>
+  </section>
+
+  <section id="statusArea" class="statusArea hidden"></section>
+
+  <section class="summaryCards" id="summaryCards"></section>
+
+  <section class="chartSection">
+    <div class="chartWrap">
+      <canvas id="hoursChart"></canvas>
+    </div>
+  </section>
+
+  <section class="rejectionSection">
+    <h2 class="sectionTitle">Rejection Breakdown</h2>
+    <p class="sectionSubtitle">For the selected date range, producer and task filters above.</p>
+    <div id="rejectionBreakdown"></div>
+  </section>
+
+  <section class="tableSection">
+    <table id="summaryTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th id="producerColHeader">Producer</th>
+          <th>Total Hrs</th>
+          <th>Approved Hrs</th>
+          <th>QC Pending Hrs</th>
+          <th>Rejected Hrs</th>
+          <th>Rejection %</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="summaryTableBody"></tbody>
+    </table>
+    <p id="emptyState" class="emptyState hidden">No data for the selected filters.</p>
+  </section>
+
+</main>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
