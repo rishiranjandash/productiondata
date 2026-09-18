@@ -127,13 +127,10 @@ function onGoogleSignIn(response) {
       updateTaskOptions([]); // seed "All tasks" immediately, before either call below resolves
 
       // getFilterOptions only ever returns anything useful for admins
-      // (Producer/Project dropdowns, which are hidden entirely for a
-      // producer) - skip the round trip for the common case instead of
-      // waiting on a response nothing will use. For admins, run it
+      // (Producer/Project dropdowns, hidden entirely for a producer) -
+      // skip the round trip for the common case. For admins, run it
       // alongside getSummary rather than waiting for it first; they're
-      // independent, and this was previously the difference between a
-      // dashboard that appears after two sequential round trips and one
-      // that appears after two round trips (or, for a producer, one).
+      // independent.
       if (currentUser.role === 'admin') {
         Promise.all([loadFilterOptions(), loadSummary()]);
       } else {
@@ -195,44 +192,44 @@ function loadFilterOptions() {
   return callBackend('getFilterOptions', {})
     .then(function (result) {
       if (!result.success) throw new Error(result.error || 'Could not load filters.');
-
-      const producerSelect = document.getElementById('producerSelect');
-      producerSelect.innerHTML = '';
-
-      if (currentUser.role === 'admin') {
-        const allOpt = document.createElement('option');
-        allOpt.value = '';
-        allOpt.textContent = 'All producers';
-        producerSelect.appendChild(allOpt);
-      }
-
-      result.data.producers.forEach(function (p) {
-        const opt = document.createElement('option');
-        opt.value = p;
-        opt.textContent = p;
-        producerSelect.appendChild(opt);
-      });
-
-      if (currentUser.role === 'admin') {
-        const projectSelect = document.getElementById('projectSelect');
-        projectSelect.innerHTML = '';
-
-        const allProjectsOpt = document.createElement('option');
-        allProjectsOpt.value = '';
-        allProjectsOpt.textContent = 'All projects';
-        projectSelect.appendChild(allProjectsOpt);
-
-        (result.data.projects || []).forEach(function (p) {
-          const opt = document.createElement('option');
-          opt.value = p;
-          opt.textContent = p;
-          projectSelect.appendChild(opt);
-        });
-      }
+      applyFilterOptionsToDom_(result.data);
     })
     .catch(function (err) {
       showStatus(err.message, 'error');
     });
+}
+
+/** Populates the Producer/Project dropdowns - admin-only, both in what they're for and in who calls this. */
+function applyFilterOptionsToDom_(data) {
+  const producerSelect = document.getElementById('producerSelect');
+  producerSelect.innerHTML = '';
+
+  const allOpt = document.createElement('option');
+  allOpt.value = '';
+  allOpt.textContent = 'All producers';
+  producerSelect.appendChild(allOpt);
+
+  data.producers.forEach(function (p) {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    producerSelect.appendChild(opt);
+  });
+
+  const projectSelect = document.getElementById('projectSelect');
+  projectSelect.innerHTML = '';
+
+  const allProjectsOpt = document.createElement('option');
+  allProjectsOpt.value = '';
+  allProjectsOpt.textContent = 'All projects';
+  projectSelect.appendChild(allProjectsOpt);
+
+  (data.projects || []).forEach(function (p) {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    projectSelect.appendChild(opt);
+  });
 }
 
 /**
@@ -281,22 +278,25 @@ function loadSummary() {
   return callBackend('getSummary', { from: from, to: to, producerId: producerId, project: project, taskId: taskId })
     .then(function (result) {
       if (!result.success) throw new Error(result.error || 'Could not load data.');
-
       hideStatus();
-      updateTaskOptions(result.data.taskOptions);
-      renderSummaryCards(result.data.rows);
-      renderOverallRejectionBreakdown(result.data.overallRejectionCategories);
-      renderTable(result.data.rows);
-
-      try {
-        renderChart(result.data.rows);
-      } catch (chartErr) {
-        console.error('Chart rendering failed:', chartErr);
-      }
+      applySummaryToDom_(result.data);
     })
     .catch(function (err) {
       showStatus(err.message, 'error');
     });
+}
+
+function applySummaryToDom_(data) {
+  updateTaskOptions(data.taskOptions);
+  renderSummaryCards(data.rows);
+  renderOverallRejectionBreakdown(data.overallRejectionCategories);
+  renderTable(data.rows);
+
+  try {
+    renderChart(data.rows);
+  } catch (chartErr) {
+    console.error('Chart rendering failed:', chartErr);
+  }
 }
 
 function renderSummaryCards(rows) {
