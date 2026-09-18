@@ -6,8 +6,7 @@
  * <script src="..."> request is not).
  */
 
-let googleAccessToken = null;
-let googleTokenClient = null;
+let sessionToken = null;
 let currentUser = null; // { role, producerId, name, email }
 let hoursChart = null;
 
@@ -42,7 +41,7 @@ function callBackend(action, extraPayload) {
       reject(new Error('Failed to reach the dashboard backend.'));
     };
 
-    const payload = Object.assign({ googleAccessToken: googleAccessToken }, extraPayload || {});
+    const payload = Object.assign({ sessionToken: sessionToken }, extraPayload || {});
 
     script.src = CONFIG.APPS_SCRIPT_URL +
       '?jsonp=1' +
@@ -71,23 +70,25 @@ function hideStatus() {
 // ===================== AUTH =====================
 
 /**
- * google.accounts.oauth2.initTokenClient, not google.accounts.id - see the
- * matching comment in Code.gs's verifyGoogleAccessToken_ for why: the
- * credential/button flow's popup-blocked-on-mobile fallback does a
- * top-level redirect back to this page via response_mode=form_post, which
- * GitHub Pages can't receive (no server to read a POST body), silently
- * dropping the sign-in and landing back on a blank/signed-out page.
- * initTokenClient only ever uses a popup - requestAccessToken() is called
- * directly from our own button's click handler below, so it also always
- * has a genuine user gesture to open that popup with.
+ * Plain OAuth2 "Authorization Code" redirect - no Google JS SDK, no
+ * popup, at all. Two earlier approaches were tried and both had
+ * mobile-specific failure modes: google.accounts.id's button flow POSTs
+ * its popup-blocked fallback back to this page via response_mode=
+ * form_post, which GitHub Pages (a static host) can't receive, silently
+ * losing the sign-in; google.accounts.oauth2.initTokenClient avoids that
+ * specific bug but still depends on a popup reliably handing a result
+ * back to its opener - confirmed broken on mobile Chrome (same failure
+ * whether opened via a direct link or one shared through another app,
+ * so not an in-app-browser problem - the popup/opener handoff itself).
+ *
+ * This has none of that: clicking the button just navigates the whole
+ * page to Google, same as following any link. Google redirects back to
+ * Code.gs (not here) once the user picks an account, because Code.gs is
+ * a real backend that can receive that redirect and do the token
+ * exchange server-side; Code.gs then bounces the browser here one more
+ * time with an opaque session token in the URL fragment.
  */
 function initGoogleSignIn() {
-  googleTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CONFIG.GOOGLE_CLIENT_ID,
-    scope: 'openid email profile',
-    callback: onGoogleTokenResponse
-  });
-
   const container = document.getElementById('googleSignInButton');
   container.innerHTML = '';
 
@@ -104,19 +105,42 @@ function initGoogleSignIn() {
     '<span>Sign in with Google</span>';
 
   btn.addEventListener('click', function () {
-    googleTokenClient.requestAccessToken();
+    const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+      'client_id=' + encodeURIComponent(CONFIG.GOOGLE_CLIENT_ID) +
+      '&redirect_uri=' + encodeURIComponent(CONFIG.APPS_SCRIPT_URL) +
+      '&response_type=code' +
+      '&scope=' + encodeURIComponent('openid email profile') +
+      '&prompt=select_account';
+
+    window.location.href = authUrl;
   });
 
   container.appendChild(btn);
 }
 
-function onGoogleTokenResponse(response) {
-  if (response.error) {
-    showStatus('Google sign-in failed: ' + response.error, 'error');
-    return;
+/**
+ * Reads #session=... or #error=... left in the URL by Code.gs's
+ * redirectToFrontend_, then strips it so it doesn't linger in the
+ * address bar or get shared/bookmarked with a (short-lived, but still)
+ * live session token in it. Called once on page load.
+ */
+function consumeAuthRedirect_() {
+  const hash = window.location.hash.replace(/^#/, '');
+  if (!hash) return null;
+
+  const params = new URLSearchParams(hash);
+  const session = params.get('session');
+  const error = params.get('error');
+
+  if (session || error) {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
   }
 
-  googleAccessToken = response.access_token;
+  return { session: session, error: error };
+}
+
+function completeSignIn_(token) {
+  sessionToken = token;
   showStatus('Signing in...', 'info');
 
   callBackend('whoami', {})
@@ -143,16 +167,17 @@ function onGoogleTokenResponse(response) {
       loadFilterOptions().then(loadSummary);
     })
     .catch(function (err) {
+      sessionToken = null;
       showStatus(err.message, 'error');
     });
 }
 
 function signOut() {
-  if (googleAccessToken) {
-    try { google.accounts.oauth2.revoke(googleAccessToken); } catch (e) { /* best effort */ }
+  if (sessionToken) {
+    callBackend('signOut', {}).catch(function () { /* best effort */ });
   }
 
-  googleAccessToken = null;
+  sessionToken = null;
   currentUser = null;
 
   document.getElementById('app').classList.add('hidden');
@@ -698,9 +723,13 @@ document.getElementById('signOutBtn').addEventListener('click', signOut);
 document.getElementById('applyFiltersBtn').addEventListener('click', loadSummary);
 
 window.addEventListener('load', function () {
-  if (typeof google !== 'undefined' && google.accounts) {
-    initGoogleSignIn();
-  } else {
-    showStatus('Google Sign-In failed to load. Check your connection and reload.', 'error');
+  initGoogleSignIn();
+
+  const redirectResult = consumeAuthRedirect_();
+
+  if (redirectResult && redirectResult.error) {
+    showStatus(decodeURIComponent(redirectResult.error), 'error');
+  } else if (redirectResult && redirectResult.session) {
+    completeSignIn_(redirectResult.session);
   }
 });
