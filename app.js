@@ -103,7 +103,18 @@ function onGoogleSignIn(response) {
   googleIdToken = response.credential;
   showStatus('Signing in...', 'info');
 
-  callBackend('whoami', {})
+  // Set the date inputs before reading them, so the very first data
+  // request already carries the real default range instead of needing
+  // a second round trip once setDefaultDateRange() would otherwise run.
+  setDefaultDateRange();
+  const from = document.getElementById('fromDate').value;
+  const to = document.getElementById('toDate').value;
+
+  // ONE round trip for the whole initial load (auth + role + filter
+  // options + summary) instead of chaining whoami -> getFilterOptions ->
+  // getSummary. See the comment on the 'bootstrap' case in Code.gs for
+  // why this matters more than how much work each call does.
+  callBackend('bootstrap', { from: from, to: to })
     .then(function (result) {
       if (!result.success) throw new Error(result.error || 'Sign-in failed.');
 
@@ -120,25 +131,15 @@ function onGoogleSignIn(response) {
         currentUser.name + (currentUser.role === 'admin' ? ' (admin)' : '');
 
       document.getElementById('app').classList.remove('hidden');
-      hideStatus();
 
       setupForRole();
-      setDefaultDateRange();
-      updateTaskOptions([]); // seed "All tasks" immediately, before either call below resolves
 
-      // getFilterOptions only ever returns anything useful for admins
-      // (Producer/Project dropdowns, which are hidden entirely for a
-      // producer) - skip the round trip for the common case instead of
-      // waiting on a response nothing will use. For admins, run it
-      // alongside getSummary rather than waiting for it first; they're
-      // independent, and this was previously the difference between a
-      // dashboard that appears after two sequential round trips and one
-      // that appears after two round trips (or, for a producer, one).
       if (currentUser.role === 'admin') {
-        Promise.all([loadFilterOptions(), loadSummary()]);
-      } else {
-        loadSummary();
+        applyFilterOptionsToDom_(result.filterOptions);
       }
+
+      applySummaryToDom_(result.summary);
+      hideStatus();
     })
     .catch(function (err) {
       googleIdToken = null;
@@ -191,48 +192,42 @@ function formatDateInput(d) {
   return y + '-' + m + '-' + day;
 }
 
-function loadFilterOptions() {
-  return callBackend('getFilterOptions', {})
-    .then(function (result) {
-      if (!result.success) throw new Error(result.error || 'Could not load filters.');
+/**
+ * Populates the Producer/Project dropdowns - admin-only, both in what
+ * they're for and in when this is called (from the 'bootstrap' response
+ * at sign-in; nothing re-fetches this after that, since the producer/
+ * project universe doesn't change within a session).
+ */
+function applyFilterOptionsToDom_(data) {
+  const producerSelect = document.getElementById('producerSelect');
+  producerSelect.innerHTML = '';
 
-      const producerSelect = document.getElementById('producerSelect');
-      producerSelect.innerHTML = '';
+  const allOpt = document.createElement('option');
+  allOpt.value = '';
+  allOpt.textContent = 'All producers';
+  producerSelect.appendChild(allOpt);
 
-      if (currentUser.role === 'admin') {
-        const allOpt = document.createElement('option');
-        allOpt.value = '';
-        allOpt.textContent = 'All producers';
-        producerSelect.appendChild(allOpt);
-      }
+  data.producers.forEach(function (p) {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    producerSelect.appendChild(opt);
+  });
 
-      result.data.producers.forEach(function (p) {
-        const opt = document.createElement('option');
-        opt.value = p;
-        opt.textContent = p;
-        producerSelect.appendChild(opt);
-      });
+  const projectSelect = document.getElementById('projectSelect');
+  projectSelect.innerHTML = '';
 
-      if (currentUser.role === 'admin') {
-        const projectSelect = document.getElementById('projectSelect');
-        projectSelect.innerHTML = '';
+  const allProjectsOpt = document.createElement('option');
+  allProjectsOpt.value = '';
+  allProjectsOpt.textContent = 'All projects';
+  projectSelect.appendChild(allProjectsOpt);
 
-        const allProjectsOpt = document.createElement('option');
-        allProjectsOpt.value = '';
-        allProjectsOpt.textContent = 'All projects';
-        projectSelect.appendChild(allProjectsOpt);
-
-        (result.data.projects || []).forEach(function (p) {
-          const opt = document.createElement('option');
-          opt.value = p;
-          opt.textContent = p;
-          projectSelect.appendChild(opt);
-        });
-      }
-    })
-    .catch(function (err) {
-      showStatus(err.message, 'error');
-    });
+  (data.projects || []).forEach(function (p) {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    projectSelect.appendChild(opt);
+  });
 }
 
 /**
@@ -281,22 +276,25 @@ function loadSummary() {
   return callBackend('getSummary', { from: from, to: to, producerId: producerId, project: project, taskId: taskId })
     .then(function (result) {
       if (!result.success) throw new Error(result.error || 'Could not load data.');
-
       hideStatus();
-      updateTaskOptions(result.data.taskOptions);
-      renderSummaryCards(result.data.rows);
-      renderOverallRejectionBreakdown(result.data.overallRejectionCategories);
-      renderTable(result.data.rows);
-
-      try {
-        renderChart(result.data.rows);
-      } catch (chartErr) {
-        console.error('Chart rendering failed:', chartErr);
-      }
+      applySummaryToDom_(result.data);
     })
     .catch(function (err) {
       showStatus(err.message, 'error');
     });
+}
+
+function applySummaryToDom_(data) {
+  updateTaskOptions(data.taskOptions);
+  renderSummaryCards(data.rows);
+  renderOverallRejectionBreakdown(data.overallRejectionCategories);
+  renderTable(data.rows);
+
+  try {
+    renderChart(data.rows);
+  } catch (chartErr) {
+    console.error('Chart rendering failed:', chartErr);
+  }
 }
 
 function renderSummaryCards(rows) {
