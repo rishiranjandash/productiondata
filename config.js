@@ -3,5 +3,5 @@
 
 const CONFIG = {
   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwV92sBuGbzGBCWVd-t4_SxvZmXe2gx3J62KKVWahNmJGIzJD66ed7M96-KUeMcgQwy/exec', // ends in /exec
-  GOOGLE_CLIENT_ID: '467836469491-fe7gpq5l2altnjibkjn6bbdrddr5nuhn.apps.googleusercontent.com'
+  GOOGLE_CLIENT_ID: '660338742485-sqot6puo2hu94u2pja2golkb2l6iu44v.apps.googleusercontent.com'
 };
