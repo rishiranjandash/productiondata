@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Production Dashboard</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#202124;background:#f5f7fa;margin:0}
+main{max-width:820px;margin:40px auto;padding:32px;background:#fff;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+h1{margin-top:0} h2{margin-top:28px;font-size:20px} a{color:#1967d2}
+.meta{color:#5f6368;font-size:14px} footer{margin-top:36px;padding-top:18px;border-top:1px solid #dadce0;font-size:14px}
+</style>
+</head>
+<body>
+<main>
+<h1>Privacy Policy — Production Dashboard</h1>
+<p class="meta">Last updated: September 9, 2026</p>
+
+<p>Production Dashboard is a web application used to validate and record room attendance. It uses Google Sign-In for authentication, camera-based QR scanning to identify the scanned room, and device location to validate an attendance attempt against the configured attendance geofence.</p>
+
+<h2>1. Information processed</h2>
+<ul>
+<li><strong>Google account information:</strong> name and email address provided through Google Sign-In, together with the Google account identifier contained in the authentication response.</li>
+<li><strong>Attendance information:</strong> date, timestamp, user identifier, name, email address, scanned room, QR identifier, location identifier, validation status, and related attendance information.</li>
+<li><strong>Location information:</strong> device latitude, longitude, and reported GPS accuracy at the time of an attendance attempt. This information is used for geofence validation and may be recorded with the attendance or audit event.</li>
+<li><strong>Audit information:</strong> information about successful or rejected attendance attempts when needed for security, troubleshooting, and operational auditing.</li>
+</ul>
+
+<h2>2. Use of Google information</h2>
+<p>Google Sign-In is used to authenticate the person using Production Dashboard and associate the authenticated Google email address with the corresponding user record in the attendance system.</p>
+<p>Production Dashboard does not use Google Sign-In to access Gmail, Google Drive, Google Calendar, or other Google services on the user's behalf.</p>
+
+<h2>3. Use of camera and QR information</h2>
+<p>The device camera is used to scan the room QR code. The application is designed for camera-based scanning and does not provide a gallery or file-upload workflow for QR scanning. The scanned QR information is used to identify the room for attendance validation.</p>
+
+<h2>4. Use of location information</h2>
+<p>Location information is used to determine whether an attendance attempt is within the configured attendance geofence and whether the reported location accuracy meets the system's requirements. Location information associated with an attendance event may be retained as part of the attendance or audit record.</p>
+
+<h2>5. Storage</h2>
+<p>Attendance and related operational records are stored in organization-controlled Google Sheets and associated application infrastructure. Access is limited to authorized personnel responsible for administering or operating the attendance system.</p>
+
+<h2>6. Sharing</h2>
+<p>Production Dashboard does not sell personal information or Google user data. Information is not disclosed to third parties for advertising or unrelated profiling purposes. Information may be accessible to authorized personnel operating, administering, auditing, securing, or supporting the system, and may be disclosed where required by applicable law.</p>
+
+<h2>7. Security</h2>
+<p>Reasonable administrative and technical measures are used to protect information processed by Production Dashboard. No method of transmission or storage can be guaranteed to be completely secure.</p>
+
+<h2>8. Retention</h2>
+<p>Attendance and audit records are retained according to the organization's applicable attendance-record and operational-retention requirements. Questions about a particular record or its retention should be directed to the administrator responsible for Production Dashboard.</p>
+
+<h2>9. Privacy requests</h2>
+<p>If you believe information associated with an attendance record is inaccurate, or you have a privacy question or request, contact the administrator or support contact provided by the organization operating Production Dashboard.</p>
+
+<h2>10. Changes to this policy</h2>
+<p>This policy may be updated when the application's data practices change or when necessary to reflect legal, security, or operational requirements. The latest version will be published on this page.</p>
+
+<h2>11. Google API Services User Data Policy</h2>
+<p>Production Dashboard's use of information received through Google Sign-In is limited to providing authentication and attendance functionality described in this policy and is intended to comply with the Google API Services User Data Policy, including its Limited Use requirements.</p>
+
+<footer>
+<a href="/">Back to Production Dashboard</a> ·
+<a href="/terms.html">Terms of Service</a>
+</footer>
+</main>
+</body>
+</html>
