@@ -124,7 +124,21 @@ function onGoogleSignIn(response) {
 
       setupForRole();
       setDefaultDateRange();
-      loadFilterOptions().then(loadSummary);
+      updateTaskOptions([]); // seed "All tasks" immediately, before either call below resolves
+
+      // getFilterOptions only ever returns anything useful for admins
+      // (Producer/Project dropdowns, which are hidden entirely for a
+      // producer) - skip the round trip for the common case instead of
+      // waiting on a response nothing will use. For admins, run it
+      // alongside getSummary rather than waiting for it first; they're
+      // independent, and this was previously the difference between a
+      // dashboard that appears after two sequential round trips and one
+      // that appears after two round trips (or, for a producer, one).
+      if (currentUser.role === 'admin') {
+        Promise.all([loadFilterOptions(), loadSummary()]);
+      } else {
+        loadSummary();
+      }
     })
     .catch(function (err) {
       googleIdToken = null;
@@ -215,10 +229,6 @@ function loadFilterOptions() {
           projectSelect.appendChild(opt);
         });
       }
-
-      // Seed a placeholder until the first getSummary response supplies the
-      // real, date/producer-scoped task list (see updateTaskOptions).
-      updateTaskOptions([]);
     })
     .catch(function (err) {
       showStatus(err.message, 'error');
