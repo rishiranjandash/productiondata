@@ -6,7 +6,7 @@
  * <script src="..."> request is not).
  */
 
-let sessionToken = null;
+let googleIdToken = null;
 let currentUser = null; // { role, producerId, name, email }
 let hoursChart = null;
 
@@ -41,7 +41,7 @@ function callBackend(action, extraPayload) {
       reject(new Error('Failed to reach the dashboard backend.'));
     };
 
-    const payload = Object.assign({ sessionToken: sessionToken }, extraPayload || {});
+    const payload = Object.assign({ googleIdToken: googleIdToken }, extraPayload || {});
 
     script.src = CONFIG.APPS_SCRIPT_URL +
       '?jsonp=1' +
@@ -70,77 +70,37 @@ function hideStatus() {
 // ===================== AUTH =====================
 
 /**
- * Plain OAuth2 "Authorization Code" redirect - no Google JS SDK, no
- * popup, at all. Two earlier approaches were tried and both had
- * mobile-specific failure modes: google.accounts.id's button flow POSTs
- * its popup-blocked fallback back to this page via response_mode=
- * form_post, which GitHub Pages (a static host) can't receive, silently
- * losing the sign-in; google.accounts.oauth2.initTokenClient avoids that
- * specific bug but still depends on a popup reliably handing a result
- * back to its opener - confirmed broken on mobile Chrome (same failure
- * whether opened via a direct link or one shared through another app,
- * so not an in-app-browser problem - the popup/opener handoff itself).
- *
- * This has none of that: clicking the button just navigates the whole
- * page to Google, same as following any link. Google redirects back to
- * Code.gs (not here) once the user picks an account, because Code.gs is
- * a real backend that can receive that redirect and do the token
- * exchange server-side; Code.gs then bounces the browser here one more
- * time with an opaque session token in the URL fragment.
+ * google.accounts.id (Sign In With Google) - the same credential/button
+ * flow the Room Attendance System already uses in this account.
+ * initTokenClient and a full OAuth2 Authorization Code redirect were
+ * both tried and reverted while chasing a mobile sign-in failure; it
+ * turned out to be a browser-level issue (multiple Google accounts
+ * signed in, third-party cookies allowed for google.com - see the
+ * APPS_SCRIPT_URL note in README.md) that would affect any auth flow
+ * equally, this one included. Simplest approach that's already proven
+ * to work wins.
  */
 function initGoogleSignIn() {
-  const container = document.getElementById('googleSignInButton');
-  container.innerHTML = '';
-
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'googleSignInBtn';
-  btn.innerHTML =
-    '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">' +
-    '<path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>' +
-    '<path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.87-3.04.87-2.34 0-4.32-1.58-5.03-3.71H.96v2.33A9 9 0 0 0 9 18z"/>' +
-    '<path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.69 9c0-.6.1-1.18.28-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.05l3.01-2.33z"/>' +
-    '<path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>' +
-    '</svg>' +
-    '<span>Sign in with Google</span>';
-
-  btn.addEventListener('click', function () {
-    const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' +
-      'client_id=' + encodeURIComponent(CONFIG.GOOGLE_CLIENT_ID) +
-      '&redirect_uri=' + encodeURIComponent(CONFIG.APPS_SCRIPT_URL) +
-      '&response_type=code' +
-      '&scope=' + encodeURIComponent('openid email profile') +
-      '&prompt=select_account';
-
-    window.location.href = authUrl;
+  google.accounts.id.initialize({
+    client_id: CONFIG.GOOGLE_CLIENT_ID,
+    callback: onGoogleSignIn,
+    auto_select: false,
+    cancel_on_tap_outside: true
   });
 
-  container.appendChild(btn);
+  google.accounts.id.renderButton(
+    document.getElementById('googleSignInButton'),
+    { theme: 'outline', size: 'large' }
+  );
 }
 
-/**
- * Reads #session=... or #error=... left in the URL by Code.gs's
- * redirectToFrontend_, then strips it so it doesn't linger in the
- * address bar or get shared/bookmarked with a (short-lived, but still)
- * live session token in it. Called once on page load.
- */
-function consumeAuthRedirect_() {
-  const hash = window.location.hash.replace(/^#/, '');
-  if (!hash) return null;
-
-  const params = new URLSearchParams(hash);
-  const session = params.get('session');
-  const error = params.get('error');
-
-  if (session || error) {
-    history.replaceState(null, '', window.location.pathname + window.location.search);
+function onGoogleSignIn(response) {
+  if (!response || !response.credential) {
+    showStatus('Google sign-in failed. Please try again.', 'error');
+    return;
   }
 
-  return { session: session, error: error };
-}
-
-function completeSignIn_(token) {
-  sessionToken = token;
+  googleIdToken = response.credential;
   showStatus('Signing in...', 'info');
 
   callBackend('whoami', {})
@@ -167,17 +127,15 @@ function completeSignIn_(token) {
       loadFilterOptions().then(loadSummary);
     })
     .catch(function (err) {
-      sessionToken = null;
+      googleIdToken = null;
       showStatus(err.message, 'error');
     });
 }
 
 function signOut() {
-  if (sessionToken) {
-    callBackend('signOut', {}).catch(function () { /* best effort */ });
-  }
+  try { google.accounts.id.disableAutoSelect(); } catch (e) { /* best effort */ }
 
-  sessionToken = null;
+  googleIdToken = null;
   currentUser = null;
 
   document.getElementById('app').classList.add('hidden');
@@ -723,13 +681,9 @@ document.getElementById('signOutBtn').addEventListener('click', signOut);
 document.getElementById('applyFiltersBtn').addEventListener('click', loadSummary);
 
 window.addEventListener('load', function () {
-  initGoogleSignIn();
-
-  const redirectResult = consumeAuthRedirect_();
-
-  if (redirectResult && redirectResult.error) {
-    showStatus(decodeURIComponent(redirectResult.error), 'error');
-  } else if (redirectResult && redirectResult.session) {
-    completeSignIn_(redirectResult.session);
+  if (typeof google !== 'undefined' && google.accounts) {
+    initGoogleSignIn();
+  } else {
+    showStatus('Google Sign-In failed to load. Check your connection and reload.', 'error');
   }
 });
