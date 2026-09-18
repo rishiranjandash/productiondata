@@ -6,7 +6,8 @@
  * <script src="..."> request is not).
  */
 
-let googleIdToken = null;
+let googleAccessToken = null;
+let googleTokenClient = null;
 let currentUser = null; // { role, producerId, name, email }
 let hoursChart = null;
 
@@ -41,7 +42,7 @@ function callBackend(action, extraPayload) {
       reject(new Error('Failed to reach the dashboard backend.'));
     };
 
-    const payload = Object.assign({ googleIdToken: googleIdToken }, extraPayload || {});
+    const payload = Object.assign({ googleAccessToken: googleAccessToken }, extraPayload || {});
 
     script.src = CONFIG.APPS_SCRIPT_URL +
       '?jsonp=1' +
@@ -69,20 +70,53 @@ function hideStatus() {
 
 // ===================== AUTH =====================
 
+/**
+ * google.accounts.oauth2.initTokenClient, not google.accounts.id - see the
+ * matching comment in Code.gs's verifyGoogleAccessToken_ for why: the
+ * credential/button flow's popup-blocked-on-mobile fallback does a
+ * top-level redirect back to this page via response_mode=form_post, which
+ * GitHub Pages can't receive (no server to read a POST body), silently
+ * dropping the sign-in and landing back on a blank/signed-out page.
+ * initTokenClient only ever uses a popup - requestAccessToken() is called
+ * directly from our own button's click handler below, so it also always
+ * has a genuine user gesture to open that popup with.
+ */
 function initGoogleSignIn() {
-  google.accounts.id.initialize({
+  googleTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CONFIG.GOOGLE_CLIENT_ID,
-    callback: onGoogleSignIn
+    scope: 'openid email profile',
+    callback: onGoogleTokenResponse
   });
 
-  google.accounts.id.renderButton(
-    document.getElementById('googleSignInButton'),
-    { theme: 'outline', size: 'large' }
-  );
+  const container = document.getElementById('googleSignInButton');
+  container.innerHTML = '';
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'googleSignInBtn';
+  btn.innerHTML =
+    '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">' +
+    '<path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>' +
+    '<path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.87-3.04.87-2.34 0-4.32-1.58-5.03-3.71H.96v2.33A9 9 0 0 0 9 18z"/>' +
+    '<path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.69 9c0-.6.1-1.18.28-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.05l3.01-2.33z"/>' +
+    '<path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>' +
+    '</svg>' +
+    '<span>Sign in with Google</span>';
+
+  btn.addEventListener('click', function () {
+    googleTokenClient.requestAccessToken();
+  });
+
+  container.appendChild(btn);
 }
 
-function onGoogleSignIn(response) {
-  googleIdToken = response.credential;
+function onGoogleTokenResponse(response) {
+  if (response.error) {
+    showStatus('Google sign-in failed: ' + response.error, 'error');
+    return;
+  }
+
+  googleAccessToken = response.access_token;
   showStatus('Signing in...', 'info');
 
   callBackend('whoami', {})
@@ -114,10 +148,12 @@ function onGoogleSignIn(response) {
 }
 
 function signOut() {
-  googleIdToken = null;
-  currentUser = null;
+  if (googleAccessToken) {
+    try { google.accounts.oauth2.revoke(googleAccessToken); } catch (e) { /* best effort */ }
+  }
 
-  try { google.accounts.id.disableAutoSelect(); } catch (e) {}
+  googleAccessToken = null;
+  currentUser = null;
 
   document.getElementById('app').classList.add('hidden');
   document.getElementById('signedInView').classList.add('hidden');
