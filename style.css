@@ -50,6 +50,24 @@ body {
 
 #authArea { width: 100%; }
 
+.googleSignInBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: var(--tap-min);
+}
+
+.googleSignInBtn:hover { background: #f7f8f9; }
+.googleSignInBtn:active { background: #f0f2f5; }
+
 #signedInView {
   display: flex;
   align-items: center;
